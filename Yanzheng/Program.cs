@@ -85,7 +85,7 @@ botClient.StartReceiving((_, update, _) =>
             CanPinMessages = false,
             CanManageTopics = false
         });
-        Message msg = botClient.SendTextMessageAsync(update.Message.Chat.Id, $"你好，@{member.Username}！您已申请加入本群组\n请点击下方按钮进行人机验证，本次验证将于三分钟后失效。", replyMarkup: new InlineKeyboardMarkup(new[]
+        Message msg = botClient.SendTextMessageAsync(update.Message.Chat.Id, $"你好，@{member.Username}！您已申请加入本群组\n请点击下方按钮进行人机验证，本次验证将于三分钟后失效。", messageThreadId: (update.Message.Chat.IsForum ?? false) ? 114 : default, replyMarkup: new InlineKeyboardMarkup(new[]
         {
             InlineKeyboardButton.WithCallbackData("验证", "0"),
             InlineKeyboardButton.WithCallbackData("人工通过", "1")
