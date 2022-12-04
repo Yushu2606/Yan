@@ -93,23 +93,41 @@ botClient.StartReceiving((_, update, _) =>
             _ = botClient.AnswerCallbackQueryAsync(update.CallbackQuery.Id, lang.Failed);
             return;
         }
-        _ = botClient.RestrictChatMemberAsync(update.CallbackQuery.Message.Chat.Id, update.CallbackQuery.From.Id, update.Message.Chat.Permissions, DateTime.UtcNow);
+        _ = botClient.RestrictChatMemberAsync(update.CallbackQuery.Message.Chat.Id, update.CallbackQuery.From.Id, new()
+        {
+            CanSendMessages = true,
+            CanSendMediaMessages = true,
+            CanSendPolls = true,
+            CanSendOtherMessages = true,
+            CanAddWebPagePreviews = true,
+            CanChangeInfo = true,
+            CanInviteUsers = true,
+            CanPinMessages = true,
+            CanManageTopics = true
+        }, DateTime.UtcNow);
         _ = botClient.AnswerCallbackQueryAsync(update.CallbackQuery.Id, lang.Pass);
         _ = botClient.DeleteMessageAsync(update.CallbackQuery.Message.Chat.Id, update.CallbackQuery.Message.MessageId);
         _ = data[update.CallbackQuery.From.Id].Remove(update.CallbackQuery.Message.Chat.Id);
         return;
     }
-    if (
-        !botClient.GetChatAdministratorsAsync(update.Message.Chat.Id).Result.Any((chatMember) => chatMember.User.Id == botClient.BotId)
-        || update.Type is not UpdateType.Message
-        || update.Message.Type is not MessageType.ChatMembersAdded
-       )
+    if (update.Type is not UpdateType.Message)
     {
-        return;
+        if (
+            update.Message.Type is MessageType.ChatMemberLeft
+            && data.ContainsKey(update.Message.From.Id)
+            && data[update.Message.From.Id].ContainsKey(update.Message.Chat.Id)
+           )
+        {
+            _ = data[update.Message.From.Id].Remove(update.Message.Chat.Id);
+        }
+        if (update.Message.Type is not MessageType.ChatMembersAdded)
+        {
+            return;
+        }
     }
     foreach (User member in update.Message.NewChatMembers)
     {
-        LanguagePack lang = langPacks.TryGetValue(update.CallbackQuery.From.LanguageCode, out LanguagePack value) ? value : langPacks["en"];
+        LanguagePack lang = langPacks.TryGetValue(member.LanguageCode, out LanguagePack value) ? value : langPacks["en"];
         if (member.IsBot)
         {
             continue;
