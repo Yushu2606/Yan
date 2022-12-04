@@ -112,18 +112,19 @@ botClient.StartReceiving((_, update, _) =>
     }
     if (update.Type is not UpdateType.Message)
     {
-        if (
-            update.Message.Type is MessageType.ChatMemberLeft
-            && data.ContainsKey(update.Message.From.Id)
-            && data[update.Message.From.Id].ContainsKey(update.Message.Chat.Id)
-           )
-        {
-            _ = data[update.Message.From.Id].Remove(update.Message.Chat.Id);
-        }
-        if (update.Message.Type is not MessageType.ChatMembersAdded)
-        {
-            return;
-        }
+        return;
+    }
+    if (
+        update.Message.Type is MessageType.ChatMemberLeft
+        && data.ContainsKey(update.Message.From.Id)
+        && data[update.Message.From.Id].ContainsKey(update.Message.Chat.Id)
+       )
+    {
+        _ = data[update.Message.From.Id].Remove(update.Message.Chat.Id);
+    }
+    if (update.Message.Type is not MessageType.ChatMembersAdded)
+    {
+        return;
     }
     foreach (User member in update.Message.NewChatMembers)
     {
@@ -148,27 +149,28 @@ botClient.StartReceiving((_, update, _) =>
             CanPinMessages = false,
             CanManageTopics = false
         });
-        Message msg = botClient.SendTextMessageAsync(update.Message.Chat.Id, lang.Message.Replace("%1", member.Username).Replace("%2", 3.ToString()), messageThreadId: (update.Message.Chat.IsForum ?? false) ? 114 : default, replyMarkup: new InlineKeyboardMarkup(new[]
+        int min = 3;
+        Message msg = botClient.SendTextMessageAsync(update.Message.Chat.Id, lang.Message.Replace("%1", member.Username).Replace("%2", min.ToString()), messageThreadId: (update.Message.Chat.IsForum ?? false) ? 114 : default, replyMarkup: new InlineKeyboardMarkup(new[]
         {
-            InlineKeyboardButton.WithCallbackData(lang.VerifyButton, 0.ToString()),
-            InlineKeyboardButton.WithCallbackData(lang.ManualButton, 1.ToString())
-        })).Result;
+                InlineKeyboardButton.WithCallbackData(lang.VerifyButton, 0.ToString()),
+                InlineKeyboardButton.WithCallbackData(lang.ManualButton, 1.ToString())
+            })).Result;
         data[member.Id][update.Message.Chat.Id] = msg.MessageId;
         Timer timer = new()
         {
             AutoReset = false,
-            Interval = 300000
+            Interval = min * 60000
         };
         timer.Elapsed += (_, _) =>
         {
-            _ = botClient.DeleteMessageAsync(update.CallbackQuery.Message.Chat.Id, update.CallbackQuery.Message.MessageId);
+            _ = botClient.DeleteMessageAsync(update.Message.Chat.Id, msg.MessageId);
             _ = botClient.BanChatMemberAsync(update.Message.Chat.Id, member.Id);
             _ = botClient.UnbanChatMemberAsync(update.Message.Chat.Id, member.Id);
             _ = data[member.Id].Remove(update.Message.Chat.Id);
         };
         timer.Start();
     }
-}, default);
+}, (_, _, _) => { });
 while (true)
 {
     _ = Console.ReadLine();
