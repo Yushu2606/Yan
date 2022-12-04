@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -28,6 +29,48 @@ if (!File.Exists("config.json"))
 }
 config = JsonSerializer.Deserialize<Config>(File.ReadAllText("config.json"));
 
+Dictionary<string, LanguagePack> langPacks = new()
+{
+    {
+        "zh-hans",
+        new()
+        {
+            Message = "你好，@%1！您已申请加入本群组\n请点击下方按钮进行人机验证，本次验证将于%2分钟后失效。",
+            VerifyButton = "验证",
+            ManualButton = "人工通过",
+            Pass = "验证成功",
+            Failed = "验证失败"
+        }
+    },
+    {
+        "en",
+        new()
+        {
+            Message = "Hello, @%1! You have applied to join this group.\nPlease click the button below for man-machine verification. This verification will expire in %2 minutes.",
+            VerifyButton = "Captcha",
+            ManualButton = "Manual Pass",
+            Pass = "Verify Passed",
+            Failed = "Verify Failed"
+        }
+    }
+};
+if (!Directory.Exists("lang"))
+{
+    _ = Directory.CreateDirectory("lang");
+    foreach (KeyValuePair<string, LanguagePack> langPack in langPacks)
+    {
+        File.WriteAllText(Path.Combine("lang", $"{langPack.Key}.json"), JsonSerializer.Serialize(langPack.Value, new JsonSerializerOptions
+        {
+            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+            WriteIndented = true
+        }));
+    }
+}
+foreach (string file in Directory.GetFiles("lang", "*.json"))
+{
+    langPacks[Path.GetFileNameWithoutExtension(file)] = JsonSerializer.Deserialize<LanguagePack>(File.ReadAllText(file));
+}
+
 Dictionary<long, Dictionary<long, int>> data = new();
 TelegramBotClient botClient = new(config.Token, string.IsNullOrWhiteSpace(config.Proxy)
     ? default
@@ -39,6 +82,7 @@ botClient.StartReceiving((_, update, _) =>
 {
     if (update.Type is UpdateType.CallbackQuery)
     {
+        LanguagePack lang = langPacks.TryGetValue(update.CallbackQuery.From.LanguageCode, out LanguagePack value) ? value : langPacks["en"];
         if (
             (update.CallbackQuery.Data is "1" && !botClient.GetChatAdministratorsAsync(update.CallbackQuery.Message.Chat.Id).Result.Any((chatMember) => chatMember.User.Id == update.CallbackQuery.From.Id))
             || !data.ContainsKey(update.CallbackQuery.From.Id)
@@ -46,11 +90,11 @@ botClient.StartReceiving((_, update, _) =>
             || data[update.CallbackQuery.From.Id][update.CallbackQuery.Message.Chat.Id] != update.CallbackQuery.Message.MessageId
            )
         {
-            _ = botClient.AnswerCallbackQueryAsync(update.CallbackQuery.Id, "验证失败");
+            _ = botClient.AnswerCallbackQueryAsync(update.CallbackQuery.Id, lang.Failed);
             return;
         }
         _ = botClient.RestrictChatMemberAsync(update.CallbackQuery.Message.Chat.Id, update.CallbackQuery.From.Id, update.Message.Chat.Permissions, DateTime.UtcNow);
-        _ = botClient.AnswerCallbackQueryAsync(update.CallbackQuery.Id, "验证成功");
+        _ = botClient.AnswerCallbackQueryAsync(update.CallbackQuery.Id, lang.Pass);
         _ = botClient.DeleteMessageAsync(update.CallbackQuery.Message.Chat.Id, update.CallbackQuery.Message.MessageId);
         _ = data[update.CallbackQuery.From.Id].Remove(update.CallbackQuery.Message.Chat.Id);
         return;
@@ -65,6 +109,7 @@ botClient.StartReceiving((_, update, _) =>
     }
     foreach (User member in update.Message.NewChatMembers)
     {
+        LanguagePack lang = langPacks.TryGetValue(update.CallbackQuery.From.LanguageCode, out LanguagePack value) ? value : langPacks["en"];
         if (member.IsBot)
         {
             continue;
@@ -85,10 +130,10 @@ botClient.StartReceiving((_, update, _) =>
             CanPinMessages = false,
             CanManageTopics = false
         });
-        Message msg = botClient.SendTextMessageAsync(update.Message.Chat.Id, $"你好，@{member.Username}！您已申请加入本群组\n请点击下方按钮进行人机验证，本次验证将于三分钟后失效。", messageThreadId: (update.Message.Chat.IsForum ?? false) ? 114 : default, replyMarkup: new InlineKeyboardMarkup(new[]
+        Message msg = botClient.SendTextMessageAsync(update.Message.Chat.Id, lang.Message.Replace("%1", member.Username).Replace("%2", 3.ToString()), messageThreadId: (update.Message.Chat.IsForum ?? false) ? 114 : default, replyMarkup: new InlineKeyboardMarkup(new[]
         {
-            InlineKeyboardButton.WithCallbackData("验证", "0"),
-            InlineKeyboardButton.WithCallbackData("人工通过", "1")
+            InlineKeyboardButton.WithCallbackData(lang.VerifyButton, 0.ToString()),
+            InlineKeyboardButton.WithCallbackData(lang.ManualButton, 1.ToString())
         })).Result;
         data[member.Id][update.Message.Chat.Id] = msg.MessageId;
         Timer timer = new()
