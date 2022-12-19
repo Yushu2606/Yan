@@ -57,9 +57,9 @@ Dictionary<string, LanguagePack> langPacks = new()
 if (!Directory.Exists("lang"))
 {
     _ = Directory.CreateDirectory("lang");
-    foreach (KeyValuePair<string, LanguagePack> langPack in langPacks)
+    foreach ((string langCode, LanguagePack langPack) in langPacks)
     {
-        File.WriteAllText(Path.Combine("lang", $"{langPack.Key}.json"), JsonSerializer.Serialize(langPack.Value, new JsonSerializerOptions
+        File.WriteAllText(Path.Combine("lang", $"{langCode}.json"), JsonSerializer.Serialize(langPack, new JsonSerializerOptions
         {
             Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
             WriteIndented = true
@@ -83,12 +83,10 @@ botClient.StartReceiving((_, update, _) =>
     if (update.Type is UpdateType.CallbackQuery)
     {
         LanguagePack lang = langPacks.TryGetValue(update.CallbackQuery.From.LanguageCode, out LanguagePack value) ? value : langPacks["en"];
-        if (
-            (update.CallbackQuery.Data is "1" && !botClient.GetChatAdministratorsAsync(update.CallbackQuery.Message.Chat.Id).Result.Any((chatMember) => chatMember.User.Id == update.CallbackQuery.From.Id))
+        if ((update.CallbackQuery.Data is "1" && !botClient.GetChatAdministratorsAsync(update.CallbackQuery.Message.Chat.Id).Result.Any((chatMember) => chatMember.User.Id == update.CallbackQuery.From.Id))
             || !data.ContainsKey(update.CallbackQuery.From.Id)
             || !data[update.CallbackQuery.From.Id].ContainsKey(update.CallbackQuery.Message.Chat.Id)
-            || data[update.CallbackQuery.From.Id][update.CallbackQuery.Message.Chat.Id] != update.CallbackQuery.Message.MessageId
-           )
+            || data[update.CallbackQuery.From.Id][update.CallbackQuery.Message.Chat.Id] != update.CallbackQuery.Message.MessageId)
         {
             _ = botClient.AnswerCallbackQueryAsync(update.CallbackQuery.Id, lang.Failed);
             return;
@@ -114,11 +112,9 @@ botClient.StartReceiving((_, update, _) =>
     {
         return;
     }
-    if (
-        update.Message.Type is MessageType.ChatMemberLeft
+    if (update.Message.Type is MessageType.ChatMemberLeft
         && data.ContainsKey(update.Message.From.Id)
-        && data[update.Message.From.Id].ContainsKey(update.Message.Chat.Id)
-       )
+        && data[update.Message.From.Id].ContainsKey(update.Message.Chat.Id))
     {
         _ = data[update.Message.From.Id].Remove(update.Message.Chat.Id);
     }
@@ -152,9 +148,9 @@ botClient.StartReceiving((_, update, _) =>
         int min = 3;
         Message msg = botClient.SendTextMessageAsync(update.Message.Chat.Id, lang.Message.Replace("%1", member.Username).Replace("%2", min.ToString()), messageThreadId: (update.Message.Chat.IsForum ?? false) ? 114 : default, replyMarkup: new InlineKeyboardMarkup(new[]
         {
-                InlineKeyboardButton.WithCallbackData(lang.VerifyButton, 0.ToString()),
-                InlineKeyboardButton.WithCallbackData(lang.ManualButton, 1.ToString())
-            })).Result;
+            InlineKeyboardButton.WithCallbackData(lang.VerifyButton, 0.ToString()),
+            InlineKeyboardButton.WithCallbackData(lang.ManualButton, 1.ToString())
+        })).Result;
         data[member.Id][update.Message.Chat.Id] = msg.MessageId;
         Timer timer = new()
         {
