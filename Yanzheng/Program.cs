@@ -78,12 +78,12 @@ TelegramBotClient botClient = new(config.Token, string.IsNullOrWhiteSpace(config
     {
         Proxy = new WebProxy(config.Proxy, true)
     }));
-botClient.StartReceiving((_, update, _) =>
+botClient.StartReceiving(async (_, update, _) =>
 {
     if (update.Type is UpdateType.CallbackQuery)
     {
         LanguagePack lang = langPacks.TryGetValue(update.CallbackQuery.From.LanguageCode, out LanguagePack value) ? value : langPacks["en"];
-        if ((update.CallbackQuery.Data is "1" && !botClient.GetChatAdministratorsAsync(update.CallbackQuery.Message.Chat.Id).Result.Any((chatMember) => chatMember.User.Id == update.CallbackQuery.From.Id))
+        if ((update.CallbackQuery.Data is "1" && !(await botClient.GetChatAdministratorsAsync(update.CallbackQuery.Message.Chat.Id)).Any((chatMember) => chatMember.User.Id == update.CallbackQuery.From.Id))
             || !data.ContainsKey(update.CallbackQuery.From.Id)
             || !data[update.CallbackQuery.From.Id].ContainsKey(update.CallbackQuery.Message.Chat.Id)
             || data[update.CallbackQuery.From.Id][update.CallbackQuery.Message.Chat.Id] != update.CallbackQuery.Message.MessageId)
@@ -146,11 +146,11 @@ botClient.StartReceiving((_, update, _) =>
             CanManageTopics = false
         });
         int min = 3;
-        Message msg = botClient.SendTextMessageAsync(update.Message.Chat.Id, lang.Message.Replace("%1", member.Username).Replace("%2", min.ToString()), messageThreadId: (update.Message.Chat.IsForum ?? false) ? 114 : default, replyMarkup: new InlineKeyboardMarkup(new[]
+        Message msg = await botClient.SendTextMessageAsync(update.Message.Chat.Id, lang.Message.Replace("%1", member.Username).Replace("%2", min.ToString()), messageThreadId: (update.Message.Chat.IsForum ?? false) ? 114 : default, replyMarkup: new InlineKeyboardMarkup(new[]
         {
             InlineKeyboardButton.WithCallbackData(lang.VerifyButton, 0.ToString()),
             InlineKeyboardButton.WithCallbackData(lang.ManualButton, 1.ToString())
-        })).Result;
+        }));
         data[member.Id][update.Message.Chat.Id] = msg.MessageId;
         Timer timer = new()
         {
