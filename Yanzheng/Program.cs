@@ -82,16 +82,16 @@ botClient.StartReceiving(async (_, update, _) =>
 {
     if (update.Type is UpdateType.CallbackQuery)
     {
-        LanguagePack lang = langPacks.TryGetValue(update.CallbackQuery.From.LanguageCode, out LanguagePack value) ? value : langPacks["en"];
+        LanguagePack lang = (!string.IsNullOrEmpty(update.CallbackQuery.From.LanguageCode)) ? langPacks.TryGetValue(update.CallbackQuery.From.LanguageCode, out LanguagePack value) ? value : langPacks["en"] : langPacks["en"];
         if ((update.CallbackQuery.Data is "1" && !(await botClient.GetChatAdministratorsAsync(update.CallbackQuery.Message.Chat.Id)).Any((chatMember) => chatMember.User.Id == update.CallbackQuery.From.Id))
-            || !data.ContainsKey(update.CallbackQuery.From.Id)
-            || !data[update.CallbackQuery.From.Id].ContainsKey(update.CallbackQuery.Message.Chat.Id)
-            || data[update.CallbackQuery.From.Id][update.CallbackQuery.Message.Chat.Id] != update.CallbackQuery.Message.MessageId)
+            || !data.TryGetValue(update.CallbackQuery.From.Id, out Dictionary<long, int> value1)
+            || !value1.ContainsKey(update.CallbackQuery.Message.Chat.Id)
+            || value1[update.CallbackQuery.Message.Chat.Id] != update.CallbackQuery.Message.MessageId)
         {
-            _ = botClient.AnswerCallbackQueryAsync(update.CallbackQuery.Id, lang.Failed);
+            await botClient.AnswerCallbackQueryAsync(update.CallbackQuery.Id, lang.Failed);
             return;
         }
-        _ = botClient.RestrictChatMemberAsync(update.CallbackQuery.Message.Chat.Id, update.CallbackQuery.From.Id, new()
+        await botClient.RestrictChatMemberAsync(update.CallbackQuery.Message.Chat.Id, update.CallbackQuery.From.Id, new()
         {
             CanSendMessages = true,
             CanSendMediaMessages = true,
@@ -103,9 +103,9 @@ botClient.StartReceiving(async (_, update, _) =>
             CanPinMessages = true,
             CanManageTopics = true
         }, DateTime.UtcNow);
-        _ = botClient.AnswerCallbackQueryAsync(update.CallbackQuery.Id, lang.Pass);
-        _ = botClient.DeleteMessageAsync(update.CallbackQuery.Message.Chat.Id, update.CallbackQuery.Message.MessageId);
-        _ = data[update.CallbackQuery.From.Id].Remove(update.CallbackQuery.Message.Chat.Id);
+        await botClient.AnswerCallbackQueryAsync(update.CallbackQuery.Id, lang.Pass);
+        await botClient.DeleteMessageAsync(update.CallbackQuery.Message.Chat.Id, update.CallbackQuery.Message.MessageId);
+        _ = value1.Remove(update.CallbackQuery.Message.Chat.Id);
         return;
     }
     if (update.Type is not UpdateType.Message)
@@ -113,10 +113,10 @@ botClient.StartReceiving(async (_, update, _) =>
         return;
     }
     if (update.Message.Type is MessageType.ChatMemberLeft
-        && data.ContainsKey(update.Message.From.Id)
-        && data[update.Message.From.Id].ContainsKey(update.Message.Chat.Id))
+        && data.TryGetValue(update.Message.From.Id, out Dictionary<long, int> value2)
+        && value2.ContainsKey(update.Message.Chat.Id))
     {
-        _ = data[update.Message.From.Id].Remove(update.Message.Chat.Id);
+        _ = value2.Remove(update.Message.Chat.Id);
     }
     if (update.Message.Type is not MessageType.ChatMembersAdded)
     {
@@ -124,7 +124,7 @@ botClient.StartReceiving(async (_, update, _) =>
     }
     foreach (User member in update.Message.NewChatMembers)
     {
-        LanguagePack lang = langPacks.TryGetValue(member.LanguageCode, out LanguagePack value) ? value : langPacks["en"];
+        LanguagePack lang = (!string.IsNullOrEmpty(member.LanguageCode)) ? langPacks.TryGetValue(member.LanguageCode, out LanguagePack value3) ? value3 : langPacks["en"] : langPacks["en"];
         if (member.IsBot)
         {
             continue;
@@ -133,7 +133,7 @@ botClient.StartReceiving(async (_, update, _) =>
         {
             data[member.Id] = new();
         }
-        _ = botClient.RestrictChatMemberAsync(update.Message.Chat.Id, member.Id, new ChatPermissions()
+        await botClient.RestrictChatMemberAsync(update.Message.Chat.Id, member.Id, new ChatPermissions()
         {
             CanSendMessages = false,
             CanSendMediaMessages = false,
