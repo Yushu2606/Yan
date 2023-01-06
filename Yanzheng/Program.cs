@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -32,7 +33,7 @@ config = JsonSerializer.Deserialize<Config>(File.ReadAllText("config.json"));
 Dictionary<string, LanguagePack> langPacks = new()
 {
     {
-        "zh-hans",
+        "zh-CN",
         new()
         {
             Message = "你好，@%1！您已申请加入本群组\n请点击下方按钮进行人机验证，本次验证将于%2分钟后失效。",
@@ -43,7 +44,7 @@ Dictionary<string, LanguagePack> langPacks = new()
         }
     },
     {
-        "en",
+        "en-US",
         new()
         {
             Message = "Hello, @%1! You have applied to join this group.\nPlease click the button below for man-machine verification. This verification will expire in %2 minutes.",
@@ -82,7 +83,7 @@ botClient.StartReceiving(async (_, update, _) =>
 {
     if (update.Type is UpdateType.CallbackQuery)
     {
-        LanguagePack lang = (!string.IsNullOrEmpty(update.CallbackQuery.From.LanguageCode)) ? langPacks.TryGetValue(update.CallbackQuery.From.LanguageCode, out LanguagePack value) ? value : langPacks["en"] : langPacks["en"];
+        LanguagePack lang = (!string.IsNullOrEmpty(update.CallbackQuery.From.LanguageCode)) ? langPacks.TryGetValue(update.CallbackQuery.From.LanguageCode, out LanguagePack value) ? value : langPacks[CultureInfo.CurrentCulture.Name] : langPacks[CultureInfo.CurrentCulture.Name];
         if ((update.CallbackQuery.Data is "1" && !(await botClient.GetChatAdministratorsAsync(update.CallbackQuery.Message.Chat.Id)).Any((chatMember) => chatMember.User.Id == update.CallbackQuery.From.Id))
             || !data.TryGetValue(update.CallbackQuery.From.Id, out Dictionary<long, int> value1)
             || !value1.ContainsKey(update.CallbackQuery.Message.Chat.Id)
@@ -124,7 +125,7 @@ botClient.StartReceiving(async (_, update, _) =>
     }
     foreach (User member in update.Message.NewChatMembers)
     {
-        LanguagePack lang = (!string.IsNullOrEmpty(member.LanguageCode)) ? langPacks.TryGetValue(member.LanguageCode, out LanguagePack value3) ? value3 : langPacks["en"] : langPacks["en"];
+        LanguagePack lang = (!string.IsNullOrEmpty(member.LanguageCode)) ? langPacks.TryGetValue(member.LanguageCode, out LanguagePack value3) ? value3 : langPacks[CultureInfo.CurrentCulture.Name] : langPacks[CultureInfo.CurrentCulture.Name];
         if (member.IsBot)
         {
             continue;
@@ -146,7 +147,7 @@ botClient.StartReceiving(async (_, update, _) =>
             CanManageTopics = false
         });
         int min = 3;
-        Message msg = await botClient.SendTextMessageAsync(update.Message.Chat.Id, lang.Message.Replace("%1", member.Username).Replace("%2", min.ToString()), messageThreadId: (update.Message.Chat.IsForum ?? false) ? 114 : default, replyMarkup: new InlineKeyboardMarkup(new[]
+        Message msg = await botClient.SendTextMessageAsync(update.Message.Chat.Id, lang.Message.Replace("%1", member.Username).Replace("%2", min.ToString()), messageThreadId: (update.Message.Chat.IsForum ?? false) ? 1 : default, replyMarkup: new InlineKeyboardMarkup(new[]
         {
             InlineKeyboardButton.WithCallbackData(lang.VerifyButton, 0.ToString()),
             InlineKeyboardButton.WithCallbackData(lang.ManualButton, 1.ToString())
@@ -157,11 +158,15 @@ botClient.StartReceiving(async (_, update, _) =>
             AutoReset = false,
             Interval = min * 60000
         };
-        timer.Elapsed += (_, _) =>
+        timer.Elapsed += async (_, _) =>
         {
-            _ = botClient.DeleteMessageAsync(update.Message.Chat.Id, msg.MessageId);
-            _ = botClient.BanChatMemberAsync(update.Message.Chat.Id, member.Id);
-            _ = botClient.UnbanChatMemberAsync(update.Message.Chat.Id, member.Id);
+            if (!data.TryGetValue(member.Id, out Dictionary<long, int> chats) || !chats.ContainsKey(update.Message.Chat.Id))
+            {
+                return;
+            }
+            await botClient.DeleteMessageAsync(update.Message.Chat.Id, msg.MessageId);
+            await botClient.BanChatMemberAsync(update.Message.Chat.Id, member.Id);
+            await botClient.UnbanChatMemberAsync(update.Message.Chat.Id, member.Id);
             _ = data[member.Id].Remove(update.Message.Chat.Id);
         };
         timer.Start();
