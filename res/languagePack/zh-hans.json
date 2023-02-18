@@ -1,0 +1,8 @@
+{
+  "Message": "你好，@%1！您已申请加入本群组\n请点击下方按钮进行人机验证，本次验证将于%2分钟后失效。",
+  "VerifyButton": "验证",
+  "ManualButton": "人工通过",
+  "Pass": "验证成功",
+  "Failed": "验证失败",
+  "UpdateSuccess": "更新成功"
+}
