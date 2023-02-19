@@ -36,7 +36,7 @@ foreach (FileInfo file in new DirectoryInfo("languagePack").GetFiles("*.json"))
 }
 
 LiteDatabase dataBase = new("data.db");
-Dictionary<long, Dictionary<long, int>> data = new();
+Dictionary<long, Dictionary<int, long>> data = new();
 
 TelegramBotClient botClient = new(config.Token, string.IsNullOrWhiteSpace(config.Proxy) ? default : new(new HttpClientHandler
 {
@@ -49,15 +49,15 @@ botClient.StartReceiving(async (_, update, _) =>
         case UpdateType.CallbackQuery:
             {
                 Internationalization lang = (config.EnableAutoI18n && !string.IsNullOrEmpty(update.CallbackQuery.From.LanguageCode)) ? i18nHelper.TryGetLanguageData(update.CallbackQuery.From.LanguageCode, out Internationalization value) ? value : i18nHelper[CultureInfo.CurrentCulture.Name] : i18nHelper[CultureInfo.CurrentCulture.Name];
-                if (!data.TryGetValue(update.CallbackQuery.From.Id, out Dictionary<long, int> value1)
-                    || !value1.ContainsKey(update.CallbackQuery.Message.Chat.Id)
-                    || value1[update.CallbackQuery.Message.Chat.Id] != update.CallbackQuery.Message.MessageId
-                    || (update.CallbackQuery.Data is "1" && !(await botClient.GetChatAdministratorsAsync(update.CallbackQuery.Message.Chat.Id)).Any((chatMember) => chatMember.User.Id == update.CallbackQuery.From.Id)))
+                if ((!data.TryGetValue(update.CallbackQuery.Message.Chat.Id, out Dictionary<int, long> value1)
+                     || !value1.ContainsKey(update.CallbackQuery.Message.MessageId)
+                     || value1[update.CallbackQuery.Message.MessageId] != update.CallbackQuery.From.Id)
+                     && !(await botClient.GetChatAdministratorsAsync(update.CallbackQuery.Message.Chat.Id)).Any((chatMember) => chatMember.User.Id == update.CallbackQuery.From.Id))
                 {
                     await botClient.AnswerCallbackQueryAsync(update.CallbackQuery.Id, lang["Failed"]);
                     break;
                 }
-                await botClient.RestrictChatMemberAsync(update.CallbackQuery.Message.Chat.Id, update.CallbackQuery.From.Id, new()
+                await botClient.RestrictChatMemberAsync(update.CallbackQuery.Message.Chat.Id, value1[update.CallbackQuery.Message.MessageId], new()
                 {
                     CanSendMessages = true,
                     CanSendMediaMessages = true,
@@ -71,7 +71,7 @@ botClient.StartReceiving(async (_, update, _) =>
                 }, DateTime.UtcNow);
                 await botClient.AnswerCallbackQueryAsync(update.CallbackQuery.Id, lang["Pass"]);
                 await botClient.DeleteMessageAsync(update.CallbackQuery.Message.Chat.Id, update.CallbackQuery.Message.MessageId);
-                value1.Remove(update.CallbackQuery.Message.Chat.Id);
+                value1.Remove(update.CallbackQuery.Message.MessageId);
                 break;
             }
         case UpdateType.Message:
@@ -80,9 +80,18 @@ botClient.StartReceiving(async (_, update, _) =>
                 {
                     case MessageType.ChatMemberLeft:
                         {
-                            if (data.TryGetValue(update.Message.From.Id, out Dictionary<long, int> value2) && value2.ContainsKey(update.Message.Chat.Id))
+                            if (!data.TryGetValue(update.Message.Chat.Id, out Dictionary<int, long> value2))
                             {
-                                value2.Remove(update.Message.Chat.Id);
+                                break;
+                            }
+                            foreach ((int message, long member) in value2)
+                            {
+                                if (member != update.Message.From.Id)
+                                {
+                                    continue;
+                                }
+                                await botClient.DeleteMessageAsync(update.Message.Chat.Id, message);
+                                value2.Remove(message);
                             }
                             break;
                         }
@@ -95,11 +104,11 @@ botClient.StartReceiving(async (_, update, _) =>
                                 {
                                     continue;
                                 }
-                                if (!data.ContainsKey(member.Id))
+                                if (!data.ContainsKey(update.Message.Chat.Id))
                                 {
-                                    data[member.Id] = new();
+                                    data[update.Message.Chat.Id] = new();
                                 }
-                                await botClient.RestrictChatMemberAsync(update.Message.Chat.Id, member.Id, new ChatPermissions()
+                                await botClient.RestrictChatMemberAsync(update.Message.Chat.Id, member.Id, new()
                                 {
                                     CanSendMessages = false,
                                     CanSendMediaMessages = false,
@@ -111,27 +120,26 @@ botClient.StartReceiving(async (_, update, _) =>
                                     CanPinMessages = false,
                                     CanManageTopics = false
                                 });
-                                int min = 3;
-                                Message msg = await botClient.SendTextMessageAsync(update.Message.Chat.Id, lang["Message"].Replace("%1", member.Username).Replace("%2", min.ToString()), messageThreadId: (update.Message.Chat.IsForum ?? false) ? dataBase.GetCollection<ChatData>("chats").FindOne(x => x.ChatId == update.Message.Chat.Id).MessageThreadId : default, replyMarkup: new InlineKeyboardMarkup(new[]
+                                int min = 3;    // TODO：群组管理员自定义时长
+                                Message msg = await botClient.SendTextMessageAsync(update.Message.Chat.Id, string.Format(lang["Message"], string.IsNullOrWhiteSpace(member.Username) ? member.FirstName : member.Username, min), messageThreadId: (update.Message.Chat.IsForum ?? false) ? dataBase.GetCollection<ChatData>("chats").FindOne(x => x.ChatId == update.Message.Chat.Id).MessageThreadId : default, replyMarkup: new InlineKeyboardMarkup(new[]
                                 {
-                                    InlineKeyboardButton.WithCallbackData(lang["VerifyButton"], 0.ToString()),
-                                    InlineKeyboardButton.WithCallbackData(lang["ManualButton"], 1.ToString())
+                                    InlineKeyboardButton.WithCallbackData(lang["VerifyButton"]),
                                 }));
-                                data[member.Id][update.Message.Chat.Id] = msg.MessageId;
+                                data[update.Message.Chat.Id][msg.MessageId] = member.Id;
                                 Timer timer = new(min * 60000)
                                 {
                                     AutoReset = false,
                                 };
                                 timer.Elapsed += async (_, _) =>
                                 {
-                                    if (!data.TryGetValue(member.Id, out Dictionary<long, int> chats) || !chats.ContainsKey(update.Message.Chat.Id))
+                                    if (!data.TryGetValue(update.Message.Chat.Id, out Dictionary<int, long> members) || !members.ContainsKey(msg.MessageId))
                                     {
                                         return;
                                     }
                                     await botClient.DeleteMessageAsync(update.Message.Chat.Id, msg.MessageId);
                                     await botClient.BanChatMemberAsync(update.Message.Chat.Id, member.Id);
                                     await botClient.UnbanChatMemberAsync(update.Message.Chat.Id, member.Id);
-                                    data[member.Id].Remove(update.Message.Chat.Id);
+                                    members.Remove(msg.MessageId);
                                 };
                                 timer.Start();
                             }
@@ -147,18 +155,11 @@ botClient.StartReceiving(async (_, update, _) =>
                             }
                             Internationalization lang = (config.EnableAutoI18n && !string.IsNullOrEmpty(update.Message.From.LanguageCode)) ? i18nHelper.TryGetLanguageData(update.Message.From.LanguageCode, out Internationalization value) ? value : i18nHelper[CultureInfo.CurrentCulture.Name] : i18nHelper[CultureInfo.CurrentCulture.Name];
                             ILiteCollection<ChatData> col = dataBase.GetCollection<ChatData>("chats");
-                            IEnumerable<ChatData> data = col.Find(x => x.ChatId == update.Message.Chat.Id);
-                            if (data.Any())
-                            {
-                                ChatData datum = data.First();
-                                datum.MessageThreadId = update.Message.MessageThreadId ?? 1;
-                                col.Update(datum);
-                                break;
-                            }
-                            col.Insert(new ChatData()
+                            col.DeleteMany(x => x.ChatId == update.Message.Chat.Id);
+                            col.Upsert(new ChatData()
                             {
                                 ChatId = update.Message.Chat.Id,
-                                MessageThreadId = update.Message.MessageThreadId ?? 1
+                                MessageThreadId = update.Message.MessageThreadId ?? default
                             });
                             await botClient.SendTextMessageAsync(update.Message.Chat.Id, lang["UpdateSuccess"], update.Message.MessageThreadId, replyToMessageId: update.Message.MessageId);
                             break;

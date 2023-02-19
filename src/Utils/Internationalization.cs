@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-
 namespace Yanzheng.Utils;
 
 internal class Internationalization
