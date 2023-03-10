@@ -1,4 +1,4 @@
-﻿using LiteDB;
+using LiteDB;
 using System.Globalization;
 using System.Net;
 using System.Text.Encodings.Web;

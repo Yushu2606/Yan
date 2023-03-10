@@ -1,6 +1,6 @@
-﻿namespace Yanzheng.Type;
+namespace Yanzheng.Type;
 
-internal struct Config
+internal record struct Config
 {
     public string Token { get; set; }
     public string Proxy { get; set; }
