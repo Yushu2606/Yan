@@ -7,7 +7,6 @@ using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
-using Yanzheng.Type;
 using Yanzheng.Utils;
 using File = System.IO.File;
 using JsonSerializer = System.Text.Json.JsonSerializer;
