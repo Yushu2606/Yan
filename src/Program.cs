@@ -56,18 +56,7 @@ botClient.StartReceiving(async (_, update, _) =>
                     await botClient.AnswerCallbackQueryAsync(update.CallbackQuery.Id, lang["Failed"]);
                     break;
                 }
-                await botClient.RestrictChatMemberAsync(update.CallbackQuery.Message.Chat.Id, value1[update.CallbackQuery.Message.MessageId], new()
-                {
-                    CanSendMessages = true,
-                    CanSendMediaMessages = true,
-                    CanSendPolls = true,
-                    CanSendOtherMessages = true,
-                    CanAddWebPagePreviews = true,
-                    CanChangeInfo = true,
-                    CanInviteUsers = true,
-                    CanPinMessages = true,
-                    CanManageTopics = true
-                }, DateTime.UtcNow);
+                await botClient.RestrictChatMemberAsync(update.CallbackQuery.Message.Chat.Id, value1[update.CallbackQuery.Message.MessageId], update.CallbackQuery.Message.Chat.Permissions, untilDate: DateTime.UtcNow);
                 await botClient.AnswerCallbackQueryAsync(update.CallbackQuery.Id, lang["Pass"]);
                 await botClient.DeleteMessageAsync(update.CallbackQuery.Message.Chat.Id, update.CallbackQuery.Message.MessageId);
                 value1.Remove(update.CallbackQuery.Message.MessageId);
@@ -110,7 +99,12 @@ botClient.StartReceiving(async (_, update, _) =>
                                 await botClient.RestrictChatMemberAsync(update.Message.Chat.Id, member.Id, new()
                                 {
                                     CanSendMessages = false,
-                                    CanSendMediaMessages = false,
+                                    CanSendAudios = false,
+                                    CanSendDocuments = false,
+                                    CanSendPhotos = false,
+                                    CanSendVideos = false,
+                                    CanSendVideoNotes = false,
+                                    CanSendVoiceNotes = false,
                                     CanSendPolls = false,
                                     CanSendOtherMessages = false,
                                     CanAddWebPagePreviews = false,
