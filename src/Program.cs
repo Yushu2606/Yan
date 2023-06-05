@@ -75,7 +75,7 @@ botClient.StartReceiving(async (_, update, _) =>
                                     data[update.Message.Chat.Id] = new();
                                 }
                                 int min = 3;    // TODO：群组管理员自定义时长
-                                Message msg = await botClient.SendTextMessageAsync(update.Message.Chat.Id, string.Format(lang["Message"], string.IsNullOrWhiteSpace(member.Username) ? member.FirstName : member.Username, min), messageThreadId: (update.Message.Chat.IsForum ?? false) ? dataBase.GetCollection<ChatData>("chats").FindOne(x => x.ChatId == update.Message.Chat.Id).MessageThreadId : default, replyMarkup: new InlineKeyboardMarkup(new[]
+                                Message msg = await botClient.SendTextMessageAsync(update.Message.Chat.Id, lang.Translate("Message", string.IsNullOrWhiteSpace(member.Username) ? member.FirstName : member.Username, min), messageThreadId: (update.Message.Chat.IsForum ?? false) ? dataBase.GetCollection<ChatData>("chats").FindOne(x => x.ChatId == update.Message.Chat.Id).MessageThreadId : default, replyMarkup: new InlineKeyboardMarkup(new[]
                                 {
                                     InlineKeyboardButton.WithCallbackData(lang["VerifyButton"]),
                                 }));
