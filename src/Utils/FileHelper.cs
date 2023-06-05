@@ -24,11 +24,11 @@ internal static class FileHelper
     /// <returns>文件当前数据</returns>
     internal static string CheckFile(string path, string defaultValue = "")
     {
-        if (!File.Exists(path))
+        if (File.Exists(path))
         {
-            File.WriteAllText(path, defaultValue);
-            return defaultValue;
+            return File.ReadAllText(path);
         }
-        return File.ReadAllText(path);
+        File.WriteAllText(path, defaultValue);
+        return defaultValue;
     }
 }
