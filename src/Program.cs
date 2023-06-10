@@ -103,10 +103,14 @@ botClient.StartReceiving(async (_, update, _) =>
                     groupData[update.ChatJoinRequest.Chat.Id] = new();
                 }
                 int min = 3;    // TODO：群组管理员自定义时长
-                Message msg = await botClient.SendTextMessageAsync(update.ChatJoinRequest.Chat.Id, lang.Translate("Message", string.IsNullOrWhiteSpace(update.ChatJoinRequest.From.Username) ? update.ChatJoinRequest.From.FirstName : update.ChatJoinRequest.From.Username, min), messageThreadId: (update.ChatJoinRequest.Chat.IsForum ?? false) ? dataBase.GetCollection<ChatData>("chats").FindOne(x => x.ChatId == update.ChatJoinRequest.Chat.Id).MessageThreadId : default, replyMarkup: new InlineKeyboardMarkup(new[]
-                {
-                    InlineKeyboardButton.WithCallbackData(lang["VerifyButton"]),
-                }));
+                Message msg = await botClient.SendTextMessageAsync(
+                    update.ChatJoinRequest.Chat.Id,
+                    lang.Translate("Message", string.IsNullOrWhiteSpace(update.ChatJoinRequest.From.Username) ? update.ChatJoinRequest.From.FirstName : update.ChatJoinRequest.From.Username, min),
+                    messageThreadId: (update.ChatJoinRequest.Chat.IsForum ?? false) ? dataBase.GetCollection<ChatData>("chats").FindOne(x => x.ChatId == update.ChatJoinRequest.Chat.Id).MessageThreadId : default,
+                    replyMarkup: new InlineKeyboardMarkup(new[]
+                    {
+                        InlineKeyboardButton.WithCallbackData(lang["VerifyButton"]),
+                    }));
                 groupData[update.ChatJoinRequest.Chat.Id][msg.MessageId] = update.ChatJoinRequest.UserChatId;
                 Timer timer = new(min * 60000)
                 {
