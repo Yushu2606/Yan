@@ -65,7 +65,6 @@ botClient.StartReceiving(async (_, update, _) =>
                             }
                             update.Message.Chat.JoinByRequest = true;
                             ILiteCollection<ChatData> col = dataBase.GetCollection<ChatData>("chats");
-                            col.DeleteMany(x => x.ChatId == update.Message.Chat.Id);
                             col.Upsert(new ChatData(update.Message.Chat.Id, update.Message.MessageThreadId ?? default));
                             await botClient.SendTextMessageAsync(update.Message.Chat.Id, lang["UpdateSuccess"], update.Message.MessageThreadId, replyToMessageId: update.Message.MessageId);
                         }
@@ -108,7 +107,7 @@ botClient.StartReceiving(async (_, update, _) =>
                 Message msg = await botClient.SendTextMessageAsync(
                     update.ChatJoinRequest.Chat.Id,
                     lang.Translate("Message", string.IsNullOrWhiteSpace(update.ChatJoinRequest.From.Username) ? update.ChatJoinRequest.From.FirstName : update.ChatJoinRequest.From.Username, min),
-                    messageThreadId: (update.ChatJoinRequest.Chat.IsForum ?? false) ? dataBase.GetCollection<ChatData>("chats").FindOne(x => x.ChatId == update.ChatJoinRequest.Chat.Id).MessageThreadId : default,
+                    messageThreadId: (update.ChatJoinRequest.Chat.IsForum ?? false) ? dataBase.GetCollection<ChatData>("chats").FindById(update.ChatJoinRequest.Chat.Id).MessageThreadId : default,
                     replyMarkup: new InlineKeyboardMarkup(new[]
                     {
                         InlineKeyboardButton.WithCallbackData(lang["VerifyButton"]),
