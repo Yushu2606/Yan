@@ -54,9 +54,11 @@ botClient.StartReceiving(async (_, update, _) =>
                     case MessageType.Text:
                         {
                             Internationalization lang = (config.EnableAutoI18n && !string.IsNullOrEmpty(update.Message.From.LanguageCode)) ? i18nHelper.TryGetLanguageData(update.Message.From.LanguageCode, out Internationalization value) ? value : i18nHelper[CultureInfo.CurrentCulture.Name] : i18nHelper[CultureInfo.CurrentCulture.Name];
-                            if (update.Message.Text != $"/set@{(await botClient.GetMeAsync()).Username}"
-                                || !(update.Message.Chat.IsForum ?? false)
-                                || !(await botClient.GetChatAdministratorsAsync(update.Message.Chat.Id)).Any((chatMember) => chatMember.User.Id == update.Message.From.Id))
+                            if (update.Message.Text != $"/set@{(await botClient.GetMeAsync()).Username}")
+                            {
+                                break;
+                            }
+                            if (!(update.Message.Chat.IsForum ?? false) || !(await botClient.GetChatAdministratorsAsync(update.Message.Chat.Id)).Any((chatMember) => chatMember.User.Id == update.Message.From.Id))
                             {
                                 await botClient.SendTextMessageAsync(update.Message.Chat.Id, lang["UpdateFailed"], (update.Message.Chat.IsForum ?? false) ? update.Message.MessageThreadId : default, replyToMessageId: update.Message.MessageId);
                                 break;
