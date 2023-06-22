@@ -126,15 +126,6 @@ botClient.StartReceiving(async (_, update, _) =>
                             return;
                         }
                         members.Remove(msg.MessageId);
-                        try
-                        {
-
-                            await botClient.DeclineChatJoinRequest(update.ChatJoinRequest.Chat.Id, update.ChatJoinRequest.UserChatId);
-                        }
-                        catch (ApiRequestException)
-                        {
-                            return;
-                        }
                         await botClient.DeleteMessageAsync(update.ChatJoinRequest.Chat.Id, msg.MessageId);
                     };
                     timer.Start();
