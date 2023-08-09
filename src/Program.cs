@@ -1,7 +1,6 @@
-using LiteDB;
 using System.Globalization;
 using System.Net;
-using System.Runtime.ExceptionServices;
+using LiteDB;
 using Telegram.Bot;
 using Telegram.Bot.Exceptions;
 using Telegram.Bot.Types;
@@ -15,7 +14,7 @@ ConfigHelper config = new("config.json");
 I18nHelper i18nHelper = new("languagePack");
 
 LiteDatabase dataBase = new("data.db");
-Dictionary<long, Dictionary<int, long>> groupData = new();
+Dictionary<long, Dictionary<long, int>> groupData = new();
 
 TelegramBotClient botClient = new(config.Token, string.IsNullOrWhiteSpace(config.ProxyUrl) ? default : new(new HttpClientHandler
 {
@@ -23,115 +22,126 @@ TelegramBotClient botClient = new(config.Token, string.IsNullOrWhiteSpace(config
 }));
 botClient.StartReceiving(async (_, update, _) =>
 {
-    switch (update.Type)
+    try
     {
-        case UpdateType.CallbackQuery:
-            {
-                Internationalization lang = (config.EnableAutoI18n && !string.IsNullOrEmpty(update.CallbackQuery.From.LanguageCode)) ? i18nHelper.TryGetLanguageData(update.CallbackQuery.From.LanguageCode, out Internationalization value) ? value : i18nHelper[CultureInfo.CurrentCulture.Name] : i18nHelper[CultureInfo.CurrentCulture.Name];
-                if (!groupData.TryGetValue(update.CallbackQuery.Message.Chat.Id, out Dictionary<int, long> data)
-                     || !data.TryGetValue(update.CallbackQuery.Message.MessageId, out long userId)
-                     || userId != update.CallbackQuery.From.Id)
+        switch (update.Type)
+        {
+            case UpdateType.CallbackQuery:
                 {
-                    await botClient.AnswerCallbackQueryAsync(update.CallbackQuery.Id, lang["Failed"]);
-                    break;
-                }
-                try
-                {
-                    await botClient.ApproveChatJoinRequest(update.CallbackQuery.Message.Chat.Id, data[update.CallbackQuery.Message.MessageId]);
-                }
-                catch (ApiRequestException)
-                {
-                    await botClient.AnswerCallbackQueryAsync(update.CallbackQuery.Id, lang["Failed"]);
-                    break;
-                }
-                await botClient.AnswerCallbackQueryAsync(update.CallbackQuery.Id, lang["Pass"]);
-                break;
-            }
-        case UpdateType.Message:
-            {
-                switch (update.Message.Type)
-                {
-                    case MessageType.Text:
-                        {
-                            Internationalization lang = (config.EnableAutoI18n && !string.IsNullOrEmpty(update.Message.From.LanguageCode)) ? i18nHelper.TryGetLanguageData(update.Message.From.LanguageCode, out Internationalization value) ? value : i18nHelper[CultureInfo.CurrentCulture.Name] : i18nHelper[CultureInfo.CurrentCulture.Name];
-                            if (update.Message.Text != $"/set@{(await botClient.GetMeAsync()).Username}")
-                            {
-                                break;
-                            }
-                            if (!(update.Message.Chat.IsForum ?? false) || !(await botClient.GetChatAdministratorsAsync(update.Message.Chat.Id)).Any((chatMember) => chatMember.User.Id == update.Message.From.Id))
-                            {
-                                await botClient.SendTextMessageAsync(update.Message.Chat.Id, lang["UpdateFailed"], (update.Message.Chat.IsForum ?? false) ? update.Message.MessageThreadId : default, replyToMessageId: update.Message.MessageId);
-                                break;
-                            }
-                            update.Message.Chat.JoinByRequest = true;
-                            ILiteCollection<ChatData> col = dataBase.GetCollection<ChatData>("chats");
-                            col.Upsert(new ChatData(update.Message.Chat.Id, update.Message.MessageThreadId ?? default));
-                            await botClient.SendTextMessageAsync(update.Message.Chat.Id, lang["UpdateSuccess"], update.Message.MessageThreadId, replyToMessageId: update.Message.MessageId);
-                        }
+                    Internationalization lang = (config.EnableAutoI18n && !string.IsNullOrEmpty(update.CallbackQuery.From.LanguageCode)) ? i18nHelper.TryGetLanguageData(update.CallbackQuery.From.LanguageCode, out Internationalization value) ? value : i18nHelper[CultureInfo.CurrentCulture.Name] : i18nHelper[CultureInfo.CurrentCulture.Name];
+                    if (!groupData.TryGetValue(update.CallbackQuery.Message.Chat.Id, out Dictionary<long, int> data)
+                         || !data.TryGetValue(update.CallbackQuery.From.Id, out int messageId)
+                         || messageId != update.CallbackQuery.Message.MessageId)
+                    {
+                        await botClient.AnswerCallbackQueryAsync(update.CallbackQuery.Id, lang["Failed"]);
                         break;
-                    case MessageType.ChatMembersAdded:
-                        {
-                            foreach (User member in update.Message.NewChatMembers)
+                    }
+                    try
+                    {
+                        await botClient.ApproveChatJoinRequest(update.CallbackQuery.Message.Chat.Id, data[update.CallbackQuery.Message.MessageId]);
+                    }
+                    catch (ApiRequestException)
+                    {
+                        await botClient.AnswerCallbackQueryAsync(update.CallbackQuery.Id, lang["Failed"]);
+                        break;
+                    }
+                    await botClient.AnswerCallbackQueryAsync(update.CallbackQuery.Id, lang["Pass"]);
+                    break;
+                }
+            case UpdateType.Message:
+                {
+                    switch (update.Message.Type)
+                    {
+                        case MessageType.Text:
                             {
-                                if (!groupData.TryGetValue(update.Message.Chat.Id, out Dictionary<int, long> data))
+                                Internationalization lang = (config.EnableAutoI18n && !string.IsNullOrEmpty(update.Message.From.LanguageCode)) ? i18nHelper.TryGetLanguageData(update.Message.From.LanguageCode, out Internationalization value) ? value : i18nHelper[CultureInfo.CurrentCulture.Name] : i18nHelper[CultureInfo.CurrentCulture.Name];
+                                if (update.Message.Text != $"/set@{(await botClient.GetMeAsync()).Username}")
                                 {
                                     break;
                                 }
-                                foreach ((int messageId, long userId) in data)
+                                if (!(update.Message.Chat.IsForum ?? false) || !(await botClient.GetChatAdministratorsAsync(update.Message.Chat.Id)).Any((chatMember) => chatMember.User.Id == update.Message.From.Id))
                                 {
-                                    if (userId != member.Id)
+                                    await botClient.SendTextMessageAsync(update.Message.Chat.Id, lang["UpdateFailed"], (update.Message.Chat.IsForum ?? false) ? update.Message.MessageThreadId : default, replyToMessageId: update.Message.MessageId);
+                                    break;
+                                }
+                                update.Message.Chat.JoinByRequest = true;
+                                ILiteCollection<ChatData> col = dataBase.GetCollection<ChatData>("chats");
+                                col.Upsert(new ChatData(update.Message.Chat.Id, update.Message.MessageThreadId ?? default));
+                                await botClient.SendTextMessageAsync(update.Message.Chat.Id, lang["UpdateSuccess"], update.Message.MessageThreadId, replyToMessageId: update.Message.MessageId);
+                            }
+                            break;
+                        case MessageType.ChatMembersAdded:
+                            {
+                                foreach (User member in update.Message.NewChatMembers)
+                                {
+                                    if (!groupData.TryGetValue(update.Message.Chat.Id, out Dictionary<long, int> data))
+                                    {
+                                        break;
+                                    }
+                                    if (!data.ContainsKey(member.Id))
                                     {
                                         continue;
                                     }
-                                    await botClient.DeleteMessageAsync(update.Message.Chat.Id, messageId);
-                                    data.Remove(messageId);
+                                    await botClient.DeleteMessageAsync(update.Message.Chat.Id, data[member.Id]);
+                                    data.Remove(member.Id);
                                 }
+                                break;
                             }
-                            break;
-                        }
-                }
-                break;
-            }
-        case UpdateType.ChatJoinRequest:
-            {
-                Internationalization lang = (config.EnableAutoI18n && !string.IsNullOrEmpty(update.ChatJoinRequest.From.LanguageCode)) ? i18nHelper.TryGetLanguageData(update.ChatJoinRequest.From.LanguageCode, out Internationalization value) ? value : i18nHelper[CultureInfo.CurrentCulture.Name] : i18nHelper[CultureInfo.CurrentCulture.Name];
-                if (update.ChatJoinRequest.From.IsBot)
-                {
+                    }
                     break;
                 }
-                if (!groupData.ContainsKey(update.ChatJoinRequest.Chat.Id))
+            case UpdateType.ChatJoinRequest:
                 {
-                    groupData[update.ChatJoinRequest.Chat.Id] = new();
-                }
-                int min = 3;    // TODO：群组管理员自定义时长
-                Message msg = await botClient.SendTextMessageAsync(
-                    update.ChatJoinRequest.Chat.Id,
-                    lang.Translate("Message", $"[{string.IsNullOrWhiteSpace(update.ChatJoinRequest.From.Username) ? update.ChatJoinRequest.From.FirstName + update.ChatJoinRequest.From.LastName : update.ChatJoinRequest.From.Username}](tg://user?id={update.ChatJoinRequest.From.Id})", min),
-                    messageThreadId: (update.ChatJoinRequest.Chat.IsForum ?? false) ? dataBase.GetCollection<ChatData>("chats").FindById(update.ChatJoinRequest.Chat.Id).MessageThreadId : default,
-                    replyMarkup: new InlineKeyboardMarkup(new[]
+                    Internationalization lang = (config.EnableAutoI18n && !string.IsNullOrEmpty(update.ChatJoinRequest.From.LanguageCode)) ? i18nHelper.TryGetLanguageData(update.ChatJoinRequest.From.LanguageCode, out Internationalization value) ? value : i18nHelper[CultureInfo.CurrentCulture.Name] : i18nHelper[CultureInfo.CurrentCulture.Name];
+                    if (update.ChatJoinRequest.From.IsBot)
                     {
-                            InlineKeyboardButton.WithCallbackData(lang["VerifyButton"]),
-                    })
-                );
-                groupData[update.ChatJoinRequest.Chat.Id][msg.MessageId] = update.ChatJoinRequest.UserChatId;
-                Timer timer = new(min * 60000)
-                {
-                    AutoReset = false,
-                };
-                timer.Elapsed += async (_, _) =>
-                {
-                    if (!groupData.TryGetValue(update.ChatJoinRequest.Chat.Id, out Dictionary<int, long> members) || !members.ContainsKey(msg.MessageId))
-                    {
-                        return;
+                        break;
                     }
-                    members.Remove(msg.MessageId);
-                    await botClient.DeleteMessageAsync(update.ChatJoinRequest.Chat.Id, msg.MessageId);
-                };
-                timer.Start();
-                break;
-            }
+                    if (!groupData.ContainsKey(update.ChatJoinRequest.Chat.Id))
+                    {
+                        groupData[update.ChatJoinRequest.Chat.Id] = new();
+                    }
+                    int min = 3;    // TODO：群组管理员自定义时长
+                    Message msg = await botClient.SendTextMessageAsync(
+                        update.ChatJoinRequest.Chat.Id,
+                        lang.Translate("Message", $"[{(string.IsNullOrWhiteSpace(update.ChatJoinRequest.From.Username) ? update.ChatJoinRequest.From.FirstName + update.ChatJoinRequest.From.LastName : update.ChatJoinRequest.From.Username)}](tg://user?id={update.ChatJoinRequest.From.Id})", min),
+                        messageThreadId: (update.ChatJoinRequest.Chat.IsForum ?? false) ? dataBase.GetCollection<ChatData>("chats").FindById(update.ChatJoinRequest.Chat.Id).MessageThreadId : default,
+                        replyMarkup: new InlineKeyboardMarkup(new[]
+                        {
+                            InlineKeyboardButton.WithCallbackData(lang["VerifyButton"]),
+                        })
+                    );
+                    groupData[update.ChatJoinRequest.Chat.Id][update.ChatJoinRequest.UserChatId] = msg.MessageId;
+                    Timer timer = new(min * 60000)
+                    {
+                        AutoReset = false,
+                    };
+                    timer.Elapsed += async (_, _) =>
+                    {
+                        try
+                        {
+                            if (!groupData.TryGetValue(update.ChatJoinRequest.Chat.Id, out Dictionary<long, int> members) || !members.ContainsKey(update.ChatJoinRequest.UserChatId))
+                            {
+                                return;
+                            }
+                            members.Remove(update.ChatJoinRequest.UserChatId);
+                            await botClient.DeleteMessageAsync(update.ChatJoinRequest.Chat.Id, msg.MessageId);
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine(ex);
+                        }
+                    };
+                    timer.Start();
+                    break;
+                }
+        }
     }
-}, (_, e, _) => { ExceptionDispatchInfo.Capture(e).Throw(); });
+    catch (Exception ex)
+    {
+        Console.WriteLine(ex);
+    }
+}, (_, e, _) => { Console.WriteLine(e); });
 while (true)
 {
     Console.ReadLine();
