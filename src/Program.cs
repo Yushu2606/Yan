@@ -82,7 +82,13 @@ botClient.StartReceiving(async (_, update, _) =>
                                     {
                                         continue;
                                     }
-                                    await botClient.DeleteMessageAsync(update.Message.Chat.Id, data[member.Id]);
+                                    try
+                                    {
+                                        await botClient.DeleteMessageAsync(update.Message.Chat.Id, data[member.Id]);
+                                    }
+                                    catch (ApiRequestException)
+                                    {
+                                    }
                                     data.Remove(member.Id);
                                 }
                                 break;
@@ -125,7 +131,13 @@ botClient.StartReceiving(async (_, update, _) =>
                                 return;
                             }
                             members.Remove(update.ChatJoinRequest.UserChatId);
-                            await botClient.DeleteMessageAsync(update.ChatJoinRequest.Chat.Id, msg.MessageId);
+                            try
+                            {
+                                await botClient.DeleteMessageAsync(update.ChatJoinRequest.Chat.Id, msg.MessageId);
+                            }
+                            catch (ApiRequestException)
+                            {
+                            }
                         }
                         catch (Exception ex)
                         {
