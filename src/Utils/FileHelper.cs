@@ -7,7 +7,7 @@ internal static class FileHelper
     /// </summary>
     /// <param name="path">文件夹目录</param>
     /// <returns>文件夹DirectoryInfo对象</returns>
-    internal static DirectoryInfo CheckDir(string path)
+    public static DirectoryInfo CheckDir(string path)
     {
         DirectoryInfo info = new(path);
         if (!info.Exists)
@@ -22,7 +22,7 @@ internal static class FileHelper
     /// <param name="path">文件目录</param>
     /// <param name="defaultValue">创建时的默认内容</param>
     /// <returns>文件当前数据</returns>
-    internal static string CheckFile(string path, string defaultValue = "")
+    public static string CheckFile(string path, string defaultValue = "")
     {
         if (File.Exists(path))
         {
