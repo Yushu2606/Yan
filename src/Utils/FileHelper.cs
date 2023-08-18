@@ -1,4 +1,4 @@
-namespace Yanzheng.Utils;
+namespace Yan.Utils;
 
 internal static class FileHelper
 {

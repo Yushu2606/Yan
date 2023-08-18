@@ -1,10 +1,10 @@
-using System.Net;
 using LiteDB;
+using System.Net;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Yan;
-using Yanzheng.Utils;
+using Yan.Utils;
 
 internal static class Program
 {
@@ -34,59 +34,59 @@ internal static class Program
     {
         BotClient.StartReceiving(async (_, update, _) =>
         {
-            switch (update.Type)
-            {
-                case UpdateType.CallbackQuery:
-                    {
-                        if (update.CallbackQuery is null)
+                switch (update.Type)
+                {
+                    case UpdateType.CallbackQuery:
                         {
-                            break;
-                        }
-                        update.CallbackQuery.OnCallback();
-                        break;
-                    }
-                case UpdateType.Message:
-                    {
-                        if (update.Message is null)
-                        {
-                            break;
-                        }
-                        switch (update.Message.Type)
-                        {
-                            case MessageType.Text:
-                                {
-                                    if (update.Message.Text != $"/set@{(await BotClient.GetMeAsync()).Username}")
-                                    {
-                                        break;
-                                    }
-                                    update.Message.OnSet();
-                                }
+                            if (update.CallbackQuery is null)
+                            {
                                 break;
-                            case MessageType.ChatMembersAdded:
-                                {
-                                    if (update.Message.NewChatMembers is null || !GroupData.TryGetValue(update.Message.Chat.Id, out Dictionary<long, int>? data))
+                            }
+                            update.CallbackQuery.OnCallback();
+                            break;
+                        }
+                    case UpdateType.Message:
+                        {
+                            if (update.Message is null)
+                            {
+                                break;
+                            }
+                            switch (update.Message.Type)
+                            {
+                                case MessageType.Text:
                                     {
-                                        break;
-                                    }
-                                    foreach (User member in update.Message.NewChatMembers)
-                                    {
-                                        member.OnJoin(update.Message.Chat.Id, data);
+                                        if (update.Message.Text != $"/set@{(await BotClient.GetMeAsync()).Username}")
+                                        {
+                                            break;
+                                        }
+                                        update.Message.OnSet();
                                     }
                                     break;
-                                }
-                        }
-                        break;
-                    }
-                case UpdateType.ChatJoinRequest:
-                    {
-                        if (update.ChatJoinRequest is null || update.ChatJoinRequest.From.IsBot)
-                        {
+                                case MessageType.ChatMembersAdded:
+                                    {
+                                        if (update.Message.NewChatMembers is null || !GroupData.TryGetValue(update.Message.Chat.Id, out Dictionary<long, int>? data))
+                                        {
+                                            break;
+                                        }
+                                        foreach (User member in update.Message.NewChatMembers)
+                                        {
+                                            member.OnJoin(update.Message.Chat.Id, data);
+                                        }
+                                        break;
+                                    }
+                            }
                             break;
                         }
-                        update.ChatJoinRequest.OnRequest();
-                        break;
-                    }
-            }
+                    case UpdateType.ChatJoinRequest:
+                        {
+                            if (update.ChatJoinRequest is null || update.ChatJoinRequest.From.IsBot)
+                            {
+                                break;
+                            }
+                            update.ChatJoinRequest.OnRequest();
+                            break;
+                        }
+                }
         }, (_, e, _) => { });
 
         while (true)

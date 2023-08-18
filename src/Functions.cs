@@ -2,8 +2,9 @@
 using Telegram.Bot;
 using Telegram.Bot.Exceptions;
 using Telegram.Bot.Types;
+using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
-using Yanzheng.Utils;
+using Yan.Utils;
 using Timer = System.Timers.Timer;
 
 namespace Yan;
@@ -45,8 +46,9 @@ internal static class Functions
         int min = 3;    // TODO：群组管理员自定义时长
         Message msg = await Program.BotClient.SendTextMessageAsync(
             chatJoinRequest.Chat.Id,
-            lang.Translate("Message", $"[{(string.IsNullOrWhiteSpace(chatJoinRequest.From.Username) ? chatJoinRequest.From.FirstName + chatJoinRequest.From.LastName : chatJoinRequest.From.Username)}](tg://user?id={chatJoinRequest.From.Id})", min),
-            messageThreadId: (chatJoinRequest.Chat.IsForum ?? false) ? Program.Database.GetCollection<ChatData>("chats").FindById(chatJoinRequest.Chat.Id).MessageThreadId : default,
+            lang.Translate("Message", $"[{(string.IsNullOrWhiteSpace(chatJoinRequest.From.Username) ? $"{chatJoinRequest.From.FirstName} {chatJoinRequest.From.LastName}".Escape() : chatJoinRequest.From.Username)}](tg://user?id={chatJoinRequest.From.Id})", min),
+            (chatJoinRequest.Chat.IsForum ?? false) ? Program.Database.GetCollection<ChatData>("chats").FindById(chatJoinRequest.Chat.Id).MessageThreadId : default,
+            ParseMode.MarkdownV2,
             replyMarkup: new InlineKeyboardMarkup(new[]
             {
                 InlineKeyboardButton.WithCallbackData(lang["VerifyButton"]),
@@ -83,12 +85,12 @@ internal static class Functions
         Internationalization lang = Program.I18n.GetI18n(message.From.LanguageCode);
         if ((!message.Chat.IsForum ?? true) || !(await Program.BotClient.GetChatAdministratorsAsync(message.Chat.Id)).Any((chatMember) => chatMember.User.Id == message.From.Id))
         {
-            await Program.BotClient.SendTextMessageAsync(message.Chat.Id, lang["UpdateFailed"], (message.Chat.IsForum ?? false) ? message.MessageThreadId : default, replyToMessageId: message.MessageId);
+            await Program.BotClient.SendTextMessageAsync(message.Chat.Id, lang["UpdateFailed"], (message.Chat.IsForum ?? false) ? message.MessageThreadId : default, ParseMode.MarkdownV2, replyToMessageId: message.MessageId);
             return;
         }
         ILiteCollection<ChatData> col = Program.Database.GetCollection<ChatData>("chats");
         col.Upsert(new ChatData(message.Chat.Id, message.MessageThreadId ?? default));
-        await Program.BotClient.SendTextMessageAsync(message.Chat.Id, lang["UpdateSuccess"], message.MessageThreadId, replyToMessageId: message.MessageId);
+        await Program.BotClient.SendTextMessageAsync(message.Chat.Id, lang["UpdateSuccess"], message.MessageThreadId, ParseMode.MarkdownV2, replyToMessageId: message.MessageId);
     }
     public static async void OnJoin(this User member, long chatId, Dictionary<long, int> data)
     {

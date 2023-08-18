@@ -1,9 +1,9 @@
 ﻿using System.Text.Json;
 
-namespace Yanzheng.Utils;
-internal record ConfigHelper(string Token, string ProxyUrl, bool EnableAutoI18n)
+namespace Yan.Utils;
+public record ConfigHelper(string Token, string ProxyUrl, bool EnableAutoI18n)
 {
-    public ConfigHelper(string path) : this("", "", default)
+    internal ConfigHelper(string path) : this("", "", default)
     {
         string configStr = FileHelper.CheckFile(path, JsonSerializer.Serialize(this));
         ConfigHelper? config = JsonSerializer.Deserialize<ConfigHelper>(configStr);

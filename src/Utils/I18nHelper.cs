@@ -2,7 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text.Json;
 
-namespace Yanzheng.Utils;
+namespace Yan.Utils;
 
 internal class I18nHelper
 {
@@ -37,8 +37,5 @@ internal class I18nHelper
         }
         set => AddLanguage(languageCode, value);
     }
-    public Internationalization GetI18n(string? languageCode)
-    {
-        return (Program.Config.EnableAutoI18n && !string.IsNullOrEmpty(languageCode)) ? TryGetLanguageData(languageCode, out Internationalization? value) ? value : this[CultureInfo.CurrentCulture.Name] : this[CultureInfo.CurrentCulture.Name];
-    }
+    public Internationalization GetI18n(string? languageCode) => (Program.Config.EnableAutoI18n && !string.IsNullOrEmpty(languageCode)) ? TryGetLanguageData(languageCode, out Internationalization? value) ? value : this[CultureInfo.CurrentCulture.Name] : this[CultureInfo.CurrentCulture.Name];
 }
