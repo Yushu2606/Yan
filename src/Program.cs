@@ -5,6 +5,7 @@ using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Yan;
 using Yan.Utils;
+using File = System.IO.File;
 
 internal static class Program
 {
@@ -34,6 +35,8 @@ internal static class Program
     {
         BotClient.StartReceiving(async (_, update, _) =>
         {
+            try
+            {
                 switch (update.Type)
                 {
                     case UpdateType.CallbackQuery:
@@ -42,7 +45,7 @@ internal static class Program
                             {
                                 break;
                             }
-                            update.CallbackQuery.OnCallback();
+                            await update.CallbackQuery.OnCallback();
                             break;
                         }
                     case UpdateType.Message:
@@ -59,7 +62,7 @@ internal static class Program
                                         {
                                             break;
                                         }
-                                        update.Message.OnSet();
+                                        await update.Message.OnSet();
                                     }
                                     break;
                                 case MessageType.ChatMembersAdded:
@@ -70,7 +73,7 @@ internal static class Program
                                         }
                                         foreach (User member in update.Message.NewChatMembers)
                                         {
-                                            member.OnJoin(update.Message.Chat.Id, data);
+                                            await member.OnJoin(update.Message.Chat.Id, data);
                                         }
                                         break;
                                     }
@@ -83,10 +86,15 @@ internal static class Program
                             {
                                 break;
                             }
-                            update.ChatJoinRequest.OnRequest();
+                            await update.ChatJoinRequest.OnRequest();
                             break;
                         }
                 }
+            }
+            catch (Exception ex)
+            {
+                await File.AppendAllTextAsync("Exception.log", ex.ToString());
+            }
         }, (_, e, _) => { });
 
         while (true)

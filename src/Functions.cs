@@ -11,7 +11,7 @@ namespace Yan;
 
 internal static class Functions
 {
-    public static async void OnCallback(this CallbackQuery callbackQuery)
+    public static async Task OnCallback(this CallbackQuery callbackQuery)
     {
         if (callbackQuery.Message is null)
         {
@@ -36,7 +36,7 @@ internal static class Functions
         }
         await Program.BotClient.AnswerCallbackQueryAsync(callbackQuery.Id, lang["Pass"]);
     }
-    public static async void OnRequest(this ChatJoinRequest chatJoinRequest)
+    public static async Task OnRequest(this ChatJoinRequest chatJoinRequest)
     {
         Internationalization lang = Program.I18n.GetI18n(chatJoinRequest.From.LanguageCode);
         if (!Program.GroupData.ContainsKey(chatJoinRequest.Chat.Id))
@@ -76,7 +76,7 @@ internal static class Functions
         };
         timer.Start();
     }
-    public static async void OnSet(this Message message)
+    public static async Task OnSet(this Message message)
     {
         if (message.From is null)
         {
@@ -92,7 +92,7 @@ internal static class Functions
         col.Upsert(new ChatData(message.Chat.Id, message.MessageThreadId ?? default));
         await Program.BotClient.SendTextMessageAsync(message.Chat.Id, lang["UpdateSuccess"], message.MessageThreadId, ParseMode.MarkdownV2, replyToMessageId: message.MessageId);
     }
-    public static async void OnJoin(this User member, long chatId, Dictionary<long, int> data)
+    public static async Task OnJoin(this User member, long chatId, Dictionary<long, int> data)
     {
         if (!data.ContainsKey(member.Id))
         {
