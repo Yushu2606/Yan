@@ -1,4 +1,4 @@
-﻿using LiteDB;
+using LiteDB;
 using Telegram.Bot;
 using Telegram.Bot.Exceptions;
 using Telegram.Bot.Types;
@@ -18,16 +18,16 @@ internal static class Functions
             return;
         }
         Internationalization lang = Program.I18n.GetI18n(callbackQuery.From.LanguageCode);
-        if (!Program.GroupData.TryGetValue(callbackQuery.Message.Chat.Id, out Dictionary<long, int>? data)
-             || !data.TryGetValue(callbackQuery.From.Id, out int historyMessageId)
-             || historyMessageId != callbackQuery.Message.MessageId)
+        if (!Program.GroupData.TryGetValue(callbackQuery.Message.Chat.Id, out Dictionary<long, int>? data) ||
+            !data.TryGetValue(callbackQuery.From.Id, out int historyMessageId) ||
+            historyMessageId != callbackQuery.Message.MessageId)
         {
             await Program.BotClient.AnswerCallbackQueryAsync(callbackQuery.Id, lang["Failed"]);
             return;
         }
         try
         {
-            await Program.BotClient.ApproveChatJoinRequest(callbackQuery.Message.Chat.Id, data[callbackQuery.From.Id]);
+            await Program.BotClient.ApproveChatJoinRequest(callbackQuery.Message.Chat.Id, callbackQuery.From.Id);
         }
         catch (ApiRequestException)
         {
@@ -94,13 +94,13 @@ internal static class Functions
     }
     public static async Task OnJoin(this User member, long chatId, Dictionary<long, int> data)
     {
-        if (!data.ContainsKey(member.Id))
+        if (!data.TryGetValue(member.Id, out int value))
         {
             return;
         }
         try
         {
-            await Program.BotClient.DeleteMessageAsync(chatId, data[member.Id]);
+            await Program.BotClient.DeleteMessageAsync(chatId, value);
         }
         catch (ApiRequestException)
         {

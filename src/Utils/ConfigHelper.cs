@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 
 namespace Yan.Utils;
 public record ConfigHelper(string Token, string ProxyUrl, bool EnableAutoI18n)
