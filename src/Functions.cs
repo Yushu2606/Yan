@@ -38,11 +38,15 @@ internal static class Functions
     }
     public static async Task OnRequest(this ChatJoinRequest chatJoinRequest)
     {
-        Internationalization lang = Program.I18n.GetI18n(chatJoinRequest.From.LanguageCode);
         if (!Program.GroupData.ContainsKey(chatJoinRequest.Chat.Id))
         {
             Program.GroupData[chatJoinRequest.Chat.Id] = new();
         }
+        else if (Program.GroupData[chatJoinRequest.Chat.Id].ContainsKey(chatJoinRequest.From.Id))
+        {
+            return;
+        }
+        Internationalization lang = Program.I18n.GetI18n(chatJoinRequest.From.LanguageCode);
         int min = 3;    // TODO：群组管理员自定义时长
         Message msg = await Program.BotClient.SendTextMessageAsync(
             chatJoinRequest.Chat.Id,
