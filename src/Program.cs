@@ -93,7 +93,7 @@ internal static class Program
             }
             catch (Exception ex)
             {
-                await File.AppendAllTextAsync("Exception.log", ex.ToString());
+                await File.AppendAllTextAsync("Exception.log", $"[{DateTime.Now}] {ex}\n");
             }
         }, (_, e, _) => { });
 
