@@ -1,6 +1,7 @@
 using System.Text.Json;
 
 namespace Yan.Utils;
+
 public record ConfigHelper(string Token, string ProxyUrl, bool EnableAutoI18n)
 {
     internal ConfigHelper(string path) : this("", "", default)
@@ -11,6 +12,7 @@ public record ConfigHelper(string Token, string ProxyUrl, bool EnableAutoI18n)
         {
             return;
         }
+
         Token = config.Token;
         ProxyUrl = config.ProxyUrl;
         EnableAutoI18n = config.EnableAutoI18n;
