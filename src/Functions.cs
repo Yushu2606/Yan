@@ -18,7 +18,7 @@ internal static class Functions
             return;
         }
 
-        Internationalization lang = Program.I18n.GetI18n(callbackQuery.From.LanguageCode);
+        Localizer lang = Program.Localizer.GetLocalizer(callbackQuery.From.LanguageCode);
         if (!Program.GroupData.TryGetValue(callbackQuery.Message.Chat.Id, out Dictionary<long, int>? data) ||
             !data.TryGetValue(callbackQuery.From.Id, out int historyMessageId) ||
             historyMessageId != callbackQuery.Message.MessageId)
@@ -51,22 +51,17 @@ internal static class Functions
             return;
         }
 
-        Internationalization lang = Program.I18n.GetI18n(chatJoinRequest.From.LanguageCode);
+        Localizer lang = Program.Localizer.GetLocalizer(chatJoinRequest.From.LanguageCode);
         const int min = 3; // TODO：群组管理员自定义时长
-        Message msg = await Program.BotClient.SendTextMessageAsync(
-            chatJoinRequest.Chat.Id,
+        Message msg = await Program.BotClient.SendTextMessageAsync(chatJoinRequest.Chat.Id,
             lang.Translate("Message",
                 $"[{(string.IsNullOrWhiteSpace(chatJoinRequest.From.Username) ? $"{chatJoinRequest.From.FirstName} {chatJoinRequest.From.LastName}".Escape() : chatJoinRequest.From.Username)}](tg://user?id={chatJoinRequest.From.Id})",
                 min),
             chatJoinRequest.Chat.IsForum ?? false
                 ? Program.Database.GetCollection<ChatData>("chats").FindById(chatJoinRequest.Chat.Id).MessageThreadId
-                : default,
-            ParseMode.MarkdownV2,
+                : default, ParseMode.MarkdownV2,
             replyMarkup: new InlineKeyboardMarkup(new[]
-            {
-                InlineKeyboardButton.WithCallbackData(lang["VerifyButton"])
-            })
-        );
+                { InlineKeyboardButton.WithCallbackData(lang["VerifyButton"]) }));
         Program.GroupData[chatJoinRequest.Chat.Id][chatJoinRequest.From.Id] = msg.MessageId;
         Timer timer = new(min * 60000)
         {
@@ -94,22 +89,14 @@ internal static class Functions
 
     public static async Task OnSet(this Message message)
     {
-        if (message.From is null)
-        {
-            return;
-        }
-
-        Internationalization lang = Program.I18n.GetI18n(message.From.LanguageCode);
-        if ((!message.Chat.IsForum ?? true) ||
+        if (message.From is null || (!message.Chat.IsForum ?? true) ||
             (await Program.BotClient.GetChatAdministratorsAsync(message.Chat.Id)).All(chatMember =>
                 chatMember.User.Id != message.From.Id))
         {
-            await Program.BotClient.SendTextMessageAsync(message.Chat.Id, lang["UpdateFailed"],
-                message.Chat.IsForum ?? false ? message.MessageThreadId : default, ParseMode.MarkdownV2,
-                replyToMessageId: message.MessageId);
             return;
         }
 
+        Localizer lang = Program.Localizer.GetLocalizer(message.From.LanguageCode);
         ILiteCollection<ChatData> col = Program.Database.GetCollection<ChatData>("chats");
         col.Upsert(new ChatData(message.Chat.Id, message.MessageThreadId ?? default));
         await Program.BotClient.SendTextMessageAsync(message.Chat.Id, lang["UpdateSuccess"], message.MessageThreadId,

@@ -1,6 +1,6 @@
 namespace Yan.Utils;
 
-internal class Internationalization(IReadOnlyDictionary<string, string> langData)
+internal class Localizer(IReadOnlyDictionary<string, string> langData)
 {
     public string this[string languageCode] => Translate(languageCode);
 
@@ -12,8 +12,6 @@ internal class Internationalization(IReadOnlyDictionary<string, string> langData
     /// <returns>翻译完成的信息</returns>
     public string Translate(string key, params object[] values)
     {
-        return !langData.TryGetValue(key, out string? value)
-            ? key
-            : string.Format(value, values);
+        return !langData.TryGetValue(key, out string? value) ? key : string.Format(value, values);
     }
 }

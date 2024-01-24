@@ -1,0 +1,7 @@
+{
+  "Message": "Hi, {0}! You have applied to join this group.\nPlease click the button below for man-machine verification. This verification will expire in {1} minutes.",
+  "VerifyButton": "Captcha",
+  "Pass": "Verify passed",
+  "Failed": "Verify failed",
+  "UpdateSuccess": "Update successful"
+}

@@ -4,11 +4,11 @@ using System.Text.Json;
 
 namespace Yan.Utils;
 
-internal class I18nHelper
+internal class L10nProvider
 {
-    private readonly Dictionary<string, Internationalization> _language = new();
+    private readonly Dictionary<string, Localizer> _language = new();
 
-    public I18nHelper(string path)
+    public L10nProvider(string path)
     {
         DirectoryInfo langFileDir = FileHelper.CheckDir(path);
         string defaultValue = JsonSerializer.Serialize(new Dictionary<string, string>());
@@ -26,38 +26,36 @@ internal class I18nHelper
         }
     }
 
-    public Internationalization this[string languageCode]
+    public Localizer this[string languageCode]
     {
         get
         {
-            if (TryGetLanguageData(languageCode, out Internationalization? languageData))
+            if (TryGetLanguageData(languageCode, out Localizer? languageData))
             {
                 return languageData;
             }
 
-            Internationalization data = new(new Dictionary<string, string>());
+            Localizer data = new(new Dictionary<string, string>());
             _language[languageCode] = data;
             return data;
         }
         init => AddLanguage(languageCode, value);
     }
 
-    public bool TryGetLanguageData(string languageCode, [NotNullWhen(true)] out Internationalization? languageData)
+    public bool TryGetLanguageData(string languageCode, [NotNullWhen(true)] out Localizer? languageData)
     {
         return _language.TryGetValue(languageCode, out languageData);
     }
 
-    public void AddLanguage(string languageCode, Internationalization languageData)
+    public void AddLanguage(string languageCode, Localizer languageData)
     {
         _language[languageCode] = languageData;
     }
 
-    public Internationalization GetI18n(string? languageCode)
+    public Localizer GetLocalizer(string? languageCode)
     {
-        return Program.Config.EnableAutoI18n && !string.IsNullOrEmpty(languageCode)
-            ? TryGetLanguageData(languageCode, out Internationalization? value)
-                ? value
-                : this[CultureInfo.CurrentCulture.Name]
+        return Program.Config.EnableAutoL10n && !string.IsNullOrEmpty(languageCode)
+            ? TryGetLanguageData(languageCode, out Localizer? value) ? value : this[CultureInfo.CurrentCulture.Name]
             : this[CultureInfo.CurrentCulture.Name];
     }
 }
