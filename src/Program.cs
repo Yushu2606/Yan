@@ -88,10 +88,6 @@ internal static class Program
 
                                         break;
                                     }
-                                default:
-                                    {
-                                        throw new ArgumentOutOfRangeException();
-                                    }
                             }
 
                             break;
@@ -105,10 +101,6 @@ internal static class Program
 
                             await update.ChatJoinRequest.OnRequest();
                             break;
-                        }
-                    default:
-                        {
-                            throw new ArgumentOutOfRangeException();
                         }
                 }
             }
