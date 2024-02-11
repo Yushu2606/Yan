@@ -70,8 +70,8 @@ internal static class Program
                                         }
 
                                         await update.Message.OnSet();
+                                        break;
                                     }
-                                    break;
                                 case MessageType.ChatMembersAdded:
                                     {
                                         if (update.Message.NewChatMembers is null ||
@@ -107,12 +107,15 @@ internal static class Program
             catch (Exception ex)
             {
                 Directory.CreateDirectory("logs");
-                await File.AppendAllTextAsync($"logs/{DateTime.Now:yy-MM-ddTHH-mm-ss}.log", ex.ToString());
+                string logFilePath = $"logs/{DateTime.Now:yy-MM-ddTHH-mm-ss}.log";
+                if (File.Exists(logFilePath))
+                {
+                    await File.AppendAllTextAsync(logFilePath, "\n");
+                }
+                
+                await File.AppendAllTextAsync(logFilePath, ex.ToString());
             }
         }, (_, e, _) => { });
-        while (true)
-        {
-            Console.ReadLine();
-        }
+        Thread.CurrentThread.Join();
     }
 }
