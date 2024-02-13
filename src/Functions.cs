@@ -53,38 +53,47 @@ internal static class Functions
 
         Localizer lang = Program.Localizer.GetLocalizer(chatJoinRequest.From.LanguageCode);
         const int min = 3; // TODO：群组管理员自定义时长
-        Message msg = await Program.BotClient.SendTextMessageAsync(chatJoinRequest.Chat.Id,
-            lang.Translate("Message",
-                $"[{(string.IsNullOrWhiteSpace(chatJoinRequest.From.Username) ? $"{chatJoinRequest.From.FirstName} {chatJoinRequest.From.LastName}".Escape() : chatJoinRequest.From.Username)}](tg://user?id={chatJoinRequest.From.Id})",
-                min),
-            chatJoinRequest.Chat.IsForum ?? false
-                ? Program.Database.GetCollection<ChatData>("chats").FindById(chatJoinRequest.Chat.Id).MessageThreadId
-                : default, ParseMode.MarkdownV2,
-            replyMarkup: new InlineKeyboardMarkup(new[]
-                { InlineKeyboardButton.WithCallbackData(lang["VerifyButton"]) }));
-        Program.GroupData[chatJoinRequest.Chat.Id][chatJoinRequest.From.Id] = msg.MessageId;
-        Timer timer = new(min * 60000)
+        string message = lang.Translate("Message",
+            $"[{(string.IsNullOrWhiteSpace(chatJoinRequest.From.Username) ? $"{chatJoinRequest.From.FirstName} {chatJoinRequest.From.LastName}".Escape() : chatJoinRequest.From.Username)}](tg://user?id={chatJoinRequest.From.Id})",
+            min);
+        try
         {
-            AutoReset = false
-        };
-        timer.Elapsed += async (_, _) =>
-        {
-            if (!Program.GroupData.TryGetValue(chatJoinRequest.Chat.Id, out Dictionary<long, int>? members) ||
-                !members.ContainsKey(chatJoinRequest.From.Id))
+            Message msg = await Program.BotClient.SendTextMessageAsync(chatJoinRequest.Chat.Id,
+                message,
+                chatJoinRequest.Chat.IsForum ?? false
+                    ? Program.Database.GetCollection<ChatData>("chats").FindById(chatJoinRequest.Chat.Id)
+                        .MessageThreadId
+                    : default, ParseMode.MarkdownV2,
+                replyMarkup: new InlineKeyboardMarkup(new[]
+                    { InlineKeyboardButton.WithCallbackData(lang["VerifyButton"]) }));
+            Program.GroupData[chatJoinRequest.Chat.Id][chatJoinRequest.From.Id] = msg.MessageId;
+            Timer timer = new(min * 60000)
             {
-                return;
-            }
+                AutoReset = false
+            };
+            timer.Elapsed += async (_, _) =>
+            {
+                if (!Program.GroupData.TryGetValue(chatJoinRequest.Chat.Id, out Dictionary<long, int>? members) ||
+                    !members.ContainsKey(chatJoinRequest.From.Id))
+                {
+                    return;
+                }
 
-            members.Remove(chatJoinRequest.From.Id);
-            try
-            {
-                await Program.BotClient.DeleteMessageAsync(chatJoinRequest.Chat.Id, msg.MessageId);
-            }
-            catch (ApiRequestException)
-            {
-            }
-        };
-        timer.Start();
+                members.Remove(chatJoinRequest.From.Id);
+                try
+                {
+                    await Program.BotClient.DeleteMessageAsync(chatJoinRequest.Chat.Id, msg.MessageId);
+                }
+                catch (ApiRequestException)
+                {
+                }
+            };
+            timer.Start();
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidDataException(message, ex);
+        }
     }
 
     public static async Task OnSet(this Message message)
