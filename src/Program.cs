@@ -112,7 +112,7 @@ internal static class Program
                 {
                     await File.AppendAllTextAsync(logFilePath, "\n");
                 }
-                
+
                 await File.AppendAllTextAsync(logFilePath, ex.ToString());
             }
         }, (_, e, _) => { });

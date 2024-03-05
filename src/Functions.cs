@@ -21,7 +21,7 @@ internal static class Functions
         Localizer lang = Program.Localizer.GetLocalizer(callbackQuery.From.LanguageCode);
         if (!Program.GroupData.TryGetValue(callbackQuery.Message.Chat.Id, out Dictionary<long, int>? data) ||
             !data.TryGetValue(callbackQuery.From.Id, out int historyMessageId) ||
-            historyMessageId != callbackQuery.Message.MessageId)
+            (historyMessageId != callbackQuery.Message.MessageId))
         {
             await Program.BotClient.AnswerCallbackQueryAsync(callbackQuery.Id, lang["Failed"]);
             return;
@@ -54,8 +54,9 @@ internal static class Functions
         Localizer lang = Program.Localizer.GetLocalizer(chatJoinRequest.From.LanguageCode);
         const int min = 3; // TODO：群组管理员自定义时长
         string message = lang.Translate("Message",
-            $"[{(string.IsNullOrWhiteSpace(chatJoinRequest.From.Username) ? $"{chatJoinRequest.From.FirstName} {chatJoinRequest.From.LastName}".Escape() : chatJoinRequest.From.Username)}](tg://user?id={chatJoinRequest.From.Id})",
-            min);
+            string.IsNullOrWhiteSpace(chatJoinRequest.From.Username)
+                ? $"[{$"{chatJoinRequest.From.FirstName}{chatJoinRequest.From.LastName ?? string.Empty}".Escape()}](tg://user?id={chatJoinRequest.From.Id})"
+                : $"@{chatJoinRequest.From.Username.Escape()}", min);
         try
         {
             Message msg = await Program.BotClient.SendTextMessageAsync(chatJoinRequest.Chat.Id,
