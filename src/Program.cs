@@ -32,7 +32,13 @@ internal static class Program
         BotClient = new(Config.Token,
             string.IsNullOrWhiteSpace(Config.ProxyUrl)
                 ? default
-                : new(new HttpClientHandler { Proxy = new WebProxy(Config.ProxyUrl, true) }));
+                : new(new HttpClientHandler
+                {
+                    Proxy = new WebProxy(Config.ProxyUrl, true, default,
+                        string.IsNullOrWhiteSpace(Config.ProxyUserName)
+                            ? default
+                            : new NetworkCredential(Config.ProxyUserName, Config.ProxyPassword))
+                }));
     }
 
     private static void Main()
