@@ -18,6 +18,8 @@ jobs:
       uses: actions/setup-dotnet@v3
       with:
         dotnet-version: 8.0.x
+    - name: Add `nuget.voids.site` nuget source
+      run: dotnet nuget add source https://nuget.voids.site/v3/index.json -n nuget.voids.site
     - name: Restore dependencies
       run: dotnet restore
     - name: Build
