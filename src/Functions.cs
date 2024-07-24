@@ -21,7 +21,7 @@ internal static class Functions
         Localizer lang = Program.Localizer.GetLocalizer(callbackQuery.From.LanguageCode);
         if (!Program.GroupData.TryGetValue(callbackQuery.Message.Chat.Id, out Dictionary<long, int>? data) ||
             !data.TryGetValue(callbackQuery.From.Id, out int historyMessageId) ||
-            (historyMessageId != callbackQuery.Message.MessageId))
+            historyMessageId != callbackQuery.Message.MessageId)
         {
             await Program.BotClient.AnswerCallbackQueryAsync(callbackQuery.Id, lang["Failed"]);
             return;
@@ -61,7 +61,7 @@ internal static class Functions
         {
             Message msg = await Program.BotClient.SendTextMessageAsync(chatJoinRequest.Chat.Id,
                 message,
-                chatJoinRequest.Chat.IsForum ?? false
+                chatJoinRequest.Chat.IsForum
                     ? Program.Database.GetCollection<ChatData>("chats").FindById(chatJoinRequest.Chat.Id)
                         .MessageThreadId
                     : default, ParseMode.MarkdownV2,
@@ -99,7 +99,7 @@ internal static class Functions
 
     public static async Task OnSet(this Message message)
     {
-        if (message.From is null || (!message.Chat.IsForum ?? true) ||
+        if (message.From is null || !message.Chat.IsForum ||
             (await Program.BotClient.GetChatAdministratorsAsync(message.Chat.Id)).All(chatMember =>
                 chatMember.User.Id != message.From.Id))
         {
@@ -110,7 +110,7 @@ internal static class Functions
         ILiteCollection<ChatData> col = Program.Database.GetCollection<ChatData>("chats");
         col.Upsert(new ChatData(message.Chat.Id, message.MessageThreadId ?? default));
         await Program.BotClient.SendTextMessageAsync(message.Chat.Id, lang["UpdateSuccess"], message.MessageThreadId,
-            ParseMode.MarkdownV2, replyToMessageId: message.MessageId);
+            ParseMode.MarkdownV2, replyParameters: message);
     }
 
     public static async Task OnJoin(this User member, long chatId, Dictionary<long, int> data)

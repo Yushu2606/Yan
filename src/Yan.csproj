@@ -15,9 +15,9 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="LiteDB" Version="5.0.17"/>
-        <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0"/>
-        <PackageReference Include="Telegram.Bot" Version="20.0.0-alpha.1"/>
+        <PackageReference Include="LiteDB" Version="5.0.21"/>
+        <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.0-preview.6.24327.7"/>
+        <PackageReference Include="Telegram.Bot" Version="21.7.1"/>
     </ItemGroup>
 
 </Project>
